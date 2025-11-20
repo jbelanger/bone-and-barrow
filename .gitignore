@@ -1,0 +1,31 @@
+# Godot 4+ specific ignores
+.godot/
+*.import
+*.translation
+
+# Godot-specific files to ignore
+export.cfg
+export_presets.cfg
+.mono/
+data_*/
+mono_crash.*.json
+
+# General
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Build outputs
+build/
+exports/
+dist/
+
+# IDE
+.vscode/
+.idea/
+
+# Logs and crash dumps
+logs/
+*.log
+crash_logs/

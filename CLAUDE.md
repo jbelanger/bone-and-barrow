@@ -13,7 +13,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Stakes with forgiveness (runs are tense but failure gives progress)
 - 50+ units at 60 FPS required (performance is critical)
 
-**Scope:** 6-month solo development timeline. See `docs/milestones.md` for development phases.
+**Scope:** 6-month solo development timeline. See `_developer/docs/milestones.md` for development phases.
 
 ## Code Standards (STRICT)
 
@@ -41,16 +41,48 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```
 res://
-├── autoload/      # Singletons (GameEvents, Telemetry)
-├── components/    # Reusable component scripts
-├── entities/      # Character scenes (player/, enemies/, skeletons/)
-├── systems/       # Manager scripts (WaveManager, ShopManager)
-├── scenes/        # Level scenes
-├── vfx/           # Particle effects
-├── ui/            # Interface screens
-├── assets/        # Art and audio
-└── resources/     # Custom Resources
+├── _developer/          # Non-game files (excluded from exports)
+│   ├── docs/            # Vision, milestones, design docs
+│   ├── prompts/         # AI agent instructions
+│   └── raw_assets/      # Source files (Aseprite, PSD) before export
+├── assets/              # Imported game assets
+│   ├── audio/
+│   │   ├── music/
+│   │   └── sfx/
+│   ├── sprites/         # 2D character/item art
+│   ├── environment/     # Tiles, props, textures
+│   └── fonts/
+├── autoload/            # Singletons (GameEvents, Telemetry, GameBalance)
+├── components/          # Reusable component scripts
+├── entities/            # Character scenes + scripts
+│   ├── player/
+│   ├── enemies/         # /squire, /knight subfolders
+│   ├── skeletons/       # Raised minion types
+│   └── structures/      # Crypt Heart, gravestones
+├── levels/              # Game maps and rooms
+│   ├── graveyard/       # Main biome scenes
+│   └── test_gyms/       # Prototyping/testing scenes
+├── resources/           # Data-driven Resource files (.tres)
+│   ├── enemy_stats/
+│   ├── upgrades/
+│   └── waves/           # Wave composition data
+├── systems/             # Scene-instanced managers (WaveManager, ShopManager)
+├── vfx/                 # Visual effects
+│   ├── particles/
+│   └── shaders/
+├── ui/                  # Interface screens
+│   ├── hud/
+│   ├── menus/
+│   └── theme/
+└── tools/               # Editor plugins, debug utilities
 ```
+
+**Structure Notes:**
+- `_developer/` excluded from game exports - contains docs and source art only
+- `autoload/` = globally accessible singletons (registered in Project Settings)
+- `systems/` = scene-scoped manager instances (NOT autoloads)
+- `entities/` uses collocation - each subfolder contains .tscn + .gd + related scripts
+- `test_gyms/` critical for rapid prototyping without polluting main scenes
 
 ## Single Source of Truth: game_balance.gd
 
@@ -67,7 +99,7 @@ res://
 - `GameBalance.gold_multiplier` - Scale all gold payouts
 - `GameBalance.enemy_hp_scale` - Scale all enemy HP
 - `GameBalance.wave_spawn_rate` - Enemies per second multiplier
-- And more (see game_balance.gd:296-305)
+- And more (see autoload/game_balance.gd:296-305)
 
 ## Telemetry System (Balance Metrics)
 
@@ -119,8 +151,8 @@ Before marking work complete, verify:
 **Currently no Godot project exists** - this is a pre-prototype phase with design docs only.
 
 When the Godot project is created, common commands will be:
-- Run game: `godot --path . res://scenes/main.tscn`
-- Run specific scene: `godot --path . res://scenes/test_scene.tscn`
+- Run game: `godot --path . res://main.tscn`
+- Run test scene: `godot --path . res://levels/test_gyms/test_combat.tscn`
 - Export: `godot --export "Linux/X11" build/game.x86_64`
 
 ## Design Constraints
@@ -149,10 +181,10 @@ Each wave uses **Burst-Lull-Burst** pattern:
 
 ## Key Documentation
 
-- **docs/research/vision.md** - Game philosophy, core loop, tone, why this will work
-- **docs/milestones.md** - 6-month development roadmap with success metrics
-- **docs/ai_prompts/master.md** - Detailed Godot agent instructions (strict architecture rules)
-- **game_balance.gd** - Single source of truth for ALL game numbers
+- **_developer/docs/research/vision.md** - Game philosophy, core loop, tone, why this will work
+- **_developer/docs/milestones.md** - 6-month development roadmap with success metrics
+- **_developer/prompts/master.md** - Detailed Godot agent instructions (strict architecture rules)
+- **autoload/game_balance.gd** - Single source of truth for ALL game numbers
 
 ## Milestone Status
 

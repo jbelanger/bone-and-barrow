@@ -32,18 +32,33 @@ CharacterBody3D → Sprite3D (Billboard: Enabled) + CollisionShape3D + Component
 
 ```
 res://
-├── autoload/      # Singletons
-├── components/    # Reusable logic
-├── entities/      # Character scenes (player/, enemies/, skeletons/)
-├── systems/       # Managers (WaveManager, ShopManager)
-├── scenes/        # Levels
-├── vfx/           # Particles
-├── ui/            # Interface
-├── assets/        # Art/audio
-└── resources/     # Custom Resources
+├── _developer/          # Non-game files (excluded from exports)
+│   ├── docs/            # Vision, milestones, design docs
+│   ├── prompts/         # AI agent instructions
+│   └── raw_assets/      # Source files (Aseprite, PSD)
+├── assets/              # Imported game assets
+│   ├── audio/           # music/, sfx/
+│   ├── sprites/         # 2D art
+│   ├── environment/     # Tiles, props
+│   └── fonts/
+├── autoload/            # Singletons (GameEvents, Telemetry, GameBalance)
+├── components/          # Reusable component scripts
+├── entities/            # Character scenes + scripts (player/, enemies/, skeletons/, structures/)
+├── levels/              # Game maps (graveyard/, test_gyms/)
+├── resources/           # Data-driven .tres files (enemy_stats/, upgrades/, waves/)
+├── systems/             # Scene-instanced managers (WaveManager, ShopManager)
+├── vfx/                 # particles/, shaders/
+├── ui/                  # hud/, menus/, theme/
+└── tools/               # Editor plugins, debug utilities
 ```
 
-**Rules:** `snake_case` files, create dirs if needed, delete unused files, check for existing components (DRY).
+**Key Distinctions:**
+- `autoload/` = globally accessible singletons (registered in Project Settings)
+- `systems/` = scene-scoped manager instances (NOT autoloads)
+- `entities/` uses collocation (each subfolder: .tscn + .gd + related scripts)
+- `test_gyms/` for rapid prototyping without polluting main scenes
+
+**Rules:** `snake_case` files, create dirs if needed, delete unused files aggressively, check for existing components (DRY).
 
 ---
 
@@ -79,15 +94,6 @@ Log critical game events to `Telemetry` autoload for AI-assisted balancing. Requ
 
 Use format: `Telemetry.event(name, entity, detail1, detail2, num1-4)`
 Example: `Telemetry.event("skeleton_raised", "warrior", "", "", total_count, corpses_available)`
-
----
-
-### DOCUMENTATION
-
-Maintain `DEV_LOG.md`:
-- Date, files added/modified/removed
-- One-line summaries
-- Next steps checklist
 
 ---
 
