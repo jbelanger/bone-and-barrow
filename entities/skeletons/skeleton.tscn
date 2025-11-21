@@ -1,0 +1,45 @@
+[gd_scene load_steps=5 format=3 uid="uid://bw5x8qnavh3cp"]
+
+[ext_resource type="Script" path="res://entities/skeletons/skeleton.gd" id="1_skeleton"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_visual"]
+radius = 0.3
+height = 1.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton"]
+albedo_color = Color(0.8, 0.9, 1, 1)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_skeleton"]
+height = 0.35
+radius = 0.12
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hit"]
+radius = 0.6
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_detection"]
+radius = 6.0
+
+[node name="Skeleton" type="CharacterBody3D"]
+script = ExtResource("1_skeleton")
+spawn_corpse_on_death = true
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("CapsuleMesh_visual")
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(3.7, 0, 0, 0, 3.7, 0, 0, 0, 3.7, 0, 0.65, 0)
+shape = SubResource("CylinderShape3D_skeleton")
+
+[node name="HitArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("SphereShape3D_hit")
+
+[node name="DetectionArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DetectionArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("SphereShape3D_detection")

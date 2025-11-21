@@ -1,0 +1,30 @@
+[gd_scene load_steps=6 format=3 uid="uid://bq7xk5y8m4nhv"]
+
+[ext_resource type="Script" path="res://entities/corpses/corpse.gd" id="1_corpse"]
+[ext_resource type="PackedScene" uid="uid://bw5x8qnavh3cp" path="res://entities/skeletons/skeleton.tscn" id="2_skeleton"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_interact"]
+radius = 1.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_corpse"]
+size = Vector3(0.6, 0.2, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_corpse"]
+albedo_color = Color(0.6, 0.6, 0.5, 1)
+
+[node name="Corpse" type="Node3D"]
+script = ExtResource("1_corpse")
+skeleton_scene = ExtResource("2_skeleton")
+despawn_time = 60.0
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+mesh = SubResource("BoxMesh_corpse")
+surface_material_override/0 = SubResource("StandardMaterial3D_corpse")
+
+[node name="InteractArea" type="Area3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractArea"]
+shape = SubResource("SphereShape3D_interact")
