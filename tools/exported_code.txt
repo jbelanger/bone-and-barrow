@@ -1,0 +1,1683 @@
+===== ../main.tscn =====
+[gd_scene load_steps=7 format=3 uid="uid://bgdvh6f2b6a86"]
+
+[ext_resource type="Script" uid="uid://cp5hmbttm5u2k" path="res://entities/camera/camera_rig.gd" id="1_ig7tw"]
+[ext_resource type="PackedScene" uid="uid://do0e0x63rvmxv" path="res://entities/player/player.tscn" id="2_0xm2m"]
+
+[sub_resource type="Environment" id="Environment_7dm0k"]
+background_mode = 1
+background_color = Color(0.101960786, 0.101960786, 0.18039216, 1)
+tonemap_mode = 2
+
+[sub_resource type="NavigationMesh" id="NavigationMesh_0xm2m"]
+vertices = PackedVector3Array(-24.5, 0.75, -24.5, -24.5, 0.75, 24.5, 24.5, 0.75, 24.5, 24.5, 0.75, -24.5)
+polygons = [PackedInt32Array(3, 2, 0), PackedInt32Array(0, 2, 1)]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_7dm0k"]
+size = Vector2(50, 50)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_ig7tw"]
+size = Vector3(50, 0.5, 50)
+
+[node name="Node3D" type="Node3D"]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_7dm0k")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(0.70710677, -0.61237246, 0.35355335, 0, 0.49999997, 0.86602545, -0.70710677, -0.61237246, 0.35355335, 0, 0, 0)
+light_color = Color(0.6392157, 0.6901961, 0.9098039, 1)
+light_energy = 0.5
+shadow_enabled = true
+
+[node name="Managers" type="Node" parent="."]
+
+[node name="NavigationRegion3D" type="NavigationRegion3D" parent="."]
+navigation_mesh = SubResource("NavigationMesh_0xm2m")
+
+[node name="LevelGeometry" type="Node3D" parent="NavigationRegion3D"]
+
+[node name="Floor" type="MeshInstance3D" parent="NavigationRegion3D/LevelGeometry"]
+mesh = SubResource("PlaneMesh_7dm0k")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="NavigationRegion3D/LevelGeometry/Floor"]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="NavigationRegion3D/LevelGeometry/Floor/StaticBody3D"]
+shape = SubResource("BoxShape3D_ig7tw")
+
+[node name="Entities" type="Node3D" parent="."]
+
+[node name="Player" parent="Entities" instance=ExtResource("2_0xm2m")]
+
+[node name="CameraRig" type="Node3D" parent="."]
+script = ExtResource("1_ig7tw")
+target_path = NodePath("../Entities/Player")
+
+[node name="Camera3D" type="Camera3D" parent="CameraRig"]
+transform = Transform3D(1, 0, 0, 0, 0.70710677, 0.70710677, 0, -0.70710677, 0.70710677, 0, 10, 10)
+projection = 1
+size = 10.0
+
+[node name="UI" type="CanvasLayer" parent="."]
+
+===== ../autoload/game_balance.gd =====
+extends Node
+## Game Balance & Design Constants
+##
+## This file is the single source of truth for all game balance numbers.
+## Design decisions and rationale are documented in comments.
+## See vision.md for the overall game philosophy.
+
+class_name GameBalance
+
+## ============================================================================
+## PLAYER / NECROMANCER
+## ============================================================================
+
+## Base health - should feel fragile early game
+const PLAYER_BASE_HP: int = 100
+## Maximum HP after all meta upgrades (rank 3) = 190
+const PLAYER_MAX_HP_UPGRADE: float = 0.90  # +90% total
+
+## Soul bolt is the basic attack - fast but weak to encourage skeleton army
+const SOUL_BOLT_DAMAGE: int = 10
+const SOUL_BOLT_COOLDOWN: float = 0.5  # seconds
+
+const PLAYER_MOVEMENT_SPEED: float = 300.0  # pixels per second (tune in prototype)
+
+
+## ============================================================================
+## CRYPT HEART (The thing you're defending)
+## ============================================================================
+
+## Design: Should survive ~3-5 hits from enemies that slip through
+const CRYPT_HEART_BASE_HP: int = 500
+
+
+## ============================================================================
+## SKELETON TYPES
+## ============================================================================
+## Design philosophy: Each type has a clear role, no "strictly better" options
+
+enum SkeletonType {
+	WARRIOR,  # Starter - balanced
+	ARCHER,   # Glass cannon ranged
+	BRUTE,    # Tank
+	MAGE,     # Crowd control
+	ROGUE,    # High risk/reward
+}
+
+## Skeleton stats [HP, Damage, Speed, Range, Special]
+const SKELETON_STATS = {
+	SkeletonType.WARRIOR: {
+		"hp": 20,
+		"damage": 5,
+		"speed": 250.0,  # Medium
+		"range": 50.0,   # Melee
+		"special": "none",
+		"unlock_cost": 0,  # Starting unit
+	},
+	SkeletonType.ARCHER: {
+		"hp": 12,
+		"damage": 4,
+		"speed": 200.0,  # Slow
+		"range": 400.0,  # Ranged
+		"special": "ranged_attack",
+		"unlock_cost": 800,
+	},
+	SkeletonType.BRUTE: {
+		"hp": 40,
+		"damage": 8,
+		"speed": 180.0,  # Slow
+		"range": 50.0,   # Melee
+		"special": "tank",
+		"unlock_cost": 1200,
+	},
+	SkeletonType.MAGE: {
+		"hp": 15,
+		"damage": 3,
+		"speed": 250.0,  # Medium
+		"range": 300.0,  # Ranged
+		"special": "slows_enemies",
+		"unlock_cost": 1500,
+	},
+	SkeletonType.ROGUE: {
+		"hp": 10,
+		"damage": 12,
+		"speed": 350.0,  # Fast
+		"range": 50.0,   # Melee
+		"special": "high_dps_fragile",
+		"unlock_cost": 2000,
+	},
+}
+
+## How close skeletons follow the player (meters)
+const SKELETON_FOLLOW_DISTANCE: float = 5.0
+
+## Soul cost to raise one corpse
+const RAISE_CORPSE_SOUL_COST: int = 10
+
+## Mass Raise: raise multiple at once (unlockable)
+const MASS_RAISE_COUNT: int = 3
+const MASS_RAISE_RADIUS: float = 150.0  # pixels
+
+
+## ============================================================================
+## ENEMY TYPES (MVP = 3 types)
+## ============================================================================
+## Design: Simple threats that combo together
+## - Squires: Numerous fodder that becomes YOUR army
+## - Archers: Force you to move/dodge, threaten from range
+## - Priests: Counter large armies (AOE that kills skeletons)
+
+enum EnemyType {
+	SQUIRE,
+	ARCHER,
+	PRIEST,
+}
+
+const ENEMY_STATS = {
+	EnemyType.SQUIRE: {
+		"hp": 30,
+		"speed": 280.0,  # Fast
+		"damage": 10,
+		"behavior": "beeline_to_heart",
+		"attack_range": 50.0,  # Melee
+	},
+	EnemyType.ARCHER: {
+		"hp": 25,
+		"speed": 200.0,  # Slow
+		"damage": 8,
+		"behavior": "stop_at_range_shoot_player",
+		"attack_range": 400.0,  # Ranged
+	},
+	EnemyType.PRIEST: {
+		"hp": 40,
+		"speed": 250.0,  # Medium
+		"damage": 15,
+		"behavior": "aoe_kills_skeletons",
+		"attack_range": 200.0,  # AOE radius
+		"special": "skeleton_killer",
+	},
+}
+
+
+## ============================================================================
+## WAVE COMPOSITION & DIFFICULTY SCALING
+## ============================================================================
+## Design: 5 waves, 2-3 minutes each, reaching "dawn" at 15 minutes
+## Each wave = Burst-Lull-Burst pattern to avoid exhaustion
+
+const WAVE_COUNT: int = 5
+
+## How long each wave lasts (baseline)
+const WAVE_DURATIONS: Array = [
+	120,  # Wave 1: 2 min
+	150,  # Wave 2: 2.5 min
+	180,  # Wave 3: 3 min
+	180,  # Wave 4: 3 min
+	180,  # Wave 5: 3 min (Dawn)
+]
+
+## Enemy counts per wave [Squires, Archers, Priests]
+## Design: Squires scale linearly, specialists scale faster to increase complexity
+const WAVE_COMPOSITIONS: Array = [
+	{"squires": 20, "archers": 3, "priests": 0},  # Wave 1: Learn basics
+	{"squires": 25, "archers": 6, "priests": 1},  # Wave 2: Introduce priests
+	{"squires": 30, "archers": 10, "priests": 2}, # Wave 3: First wall
+	{"squires": 35, "archers": 12, "priests": 3}, # Wave 4: Intense
+	{"squires": 40, "archers": 15, "priests": 5}, # Wave 5: Dawn or death
+]
+
+## Burst-Lull timing within each wave
+const BURST_DURATION: float = 45.0  # seconds
+const LULL_DURATION: float = 20.0   # seconds
+## Pattern: Burst -> Lull -> Burst -> Lull -> Burst -> Shop
+
+
+## ============================================================================
+## WAVE MODIFIERS (Randomization)
+## ============================================================================
+## Design: Add variety without breaking balance
+## Each wave gets ONE random modifier from appropriate pool
+
+const WAVE_MODIFIERS_EASY: Array = [
+	{"name": "Standard", "effect": "none"},
+	{"name": "Scattered", "effect": "spawn_slower"},
+]
+
+const WAVE_MODIFIERS_HARD: Array = [
+	{"name": "Reinforced", "effect": "spawn_count_125_percent"},
+	{"name": "Vanguard", "effect": "20_percent_squires_to_paladins"},
+	{"name": "Rapid", "effect": "all_spawn_at_once"},
+	{"name": "Flanking", "effect": "spawn_unexpected_gate"},
+]
+
+## Wave 1 always uses EASY pool, Wave 5 always uses HARD pool
+
+
+## ============================================================================
+## PROGRESSION: SHOP UPGRADES (Within-Run, Temporary)
+## ============================================================================
+## Design: After each wave, pick 1 of 3 upgrades
+## Shop MUST offer 1 Power / 1 Army / 1 Utility (no dead rolls)
+
+const SHOP_UPGRADES = {
+	"power": [
+		{"name": "Heal 30%", "effect": "heal", "value": 0.30},
+		{"name": "Heal 50%", "effect": "heal", "value": 0.50},
+		{"name": "+10% Max HP", "effect": "max_hp", "value": 0.10},
+		{"name": "+15% Damage", "effect": "player_damage", "value": 0.15},
+		{"name": "+20% Soul Gain", "effect": "soul_multiplier", "value": 0.20},
+	],
+	"army": [
+		{"name": "+20% Skeleton Damage", "effect": "skeleton_damage", "value": 0.20},
+		{"name": "+15% Skeleton Speed", "effect": "skeleton_speed", "value": 0.15},
+		{"name": "+25% Skeleton HP", "effect": "skeleton_hp", "value": 0.25},
+		{"name": "Skeletons Explode on Death", "effect": "skeleton_explode", "value": 5},  # AOE damage
+		{"name": "+5 Skeleton Capacity", "effect": "skeleton_cap", "value": 5},
+	],
+	"utility": [
+		{"name": "Unlock Mass Raise", "effect": "unlock_mass_raise", "value": 1},
+		{"name": "Start Next Wave with 3 Skeletons", "effect": "free_skeletons", "value": 3},
+		{"name": "Crypt Heart Shield (100 HP)", "effect": "heart_shield", "value": 100},
+		{"name": "Learn Random Spell", "effect": "learn_spell", "value": 1},
+		{"name": "Corpses Drop 2x Souls", "effect": "soul_drop", "value": 2.0},
+	],
+}
+
+const SHOP_CHOICE_TIME: float = 15.0  # seconds to pick
+
+
+## ============================================================================
+## PROGRESSION: META UPGRADES (Between-Run, Permanent)
+## ============================================================================
+## Design: Capped progression (max rank 3) to avoid trivializing content
+## Later progression = more OPTIONS, not more POWER
+
+const META_UPGRADES = {
+	"skeleton_damage": {
+		"name": "Skeleton Damage",
+		"costs": [200, 400, 800],      # Rank 1, 2, 3
+		"effects": [0.15, 0.30, 0.45], # Cumulative: +45% at max
+	},
+	"player_max_hp": {
+		"name": "Your Max HP",
+		"costs": [150, 300, 600],
+		"effects": [0.30, 0.60, 0.90], # 100 -> 190 HP
+	},
+	"soul_gain": {
+		"name": "Soul Gain",
+		"costs": [250, 500, 1000],
+		"effects": [0.20, 0.40, 0.60], # +60% souls from kills
+	},
+	"raise_speed": {
+		"name": "Raise Speed",
+		"costs": [200, 400, 800],
+		"effects": [0.30, 0.60, 0.90], # Raise corpses 90% faster
+	},
+	"start_skeletons": {
+		"name": "Starting Skeletons",
+		"costs": [500, 1000, 2000],
+		"effects": [3, 6, 9], # Start with free skeletons
+	},
+}
+
+## Spell unlocks (permanent)
+const SPELL_UNLOCKS = {
+	"bone_barrier": {"cost": 600, "description": "Shield absorbs damage"},
+	"soul_drain": {"cost": 800, "description": "Lifesteal AOE"},
+	"mass_raise": {"cost": 1000, "description": "Raise 5 corpses permanently"},
+	"death_mark": {"cost": 1200, "description": "Next kill = powerful corpse"},
+	"skeletal_swarm": {"cost": 1500, "description": "Summon 3 temp skeletons"},
+}
+
+
+## ============================================================================
+## ECONOMY: GOLD PAYOUTS
+## ============================================================================
+## Design: Even bad runs give progress. Better runs = faster progression.
+## Target: ~10-12 runs to unlock core power upgrades
+
+const GOLD_PAYOUTS: Array = [
+	50,    # Die Wave 1 (4% of max)
+	150,   # Die Wave 2 (12% of max)
+	350,   # Die Wave 3 (29% of max)
+	600,   # Die Wave 4 (50% of max)
+	900,   # Die Wave 5 (75% of max)
+	1200,  # Survive to Dawn (100%)
+]
+
+## Progression milestones (playtesting targets):
+## - Runs 1-5: Buy core power (200-800g each)
+## - Runs 6-15: Unlock skeleton types (800-2000g)
+## - Runs 16-25: Unlock spells (600-1500g)
+## - Runs 26+: Cosmetics, mastery
+
+
+## ============================================================================
+## TUNING KNOBS (For Rapid Iteration)
+## ============================================================================
+## Expose these as global multipliers to tune without touching individual values
+
+var gold_multiplier: float = 1.0       ## Scale all gold payouts
+var upgrade_price_scale: float = 1.0   ## Scale all upgrade costs
+var enemy_hp_scale: float = 1.0        ## Scale all enemy HP
+var enemy_damage_scale: float = 1.0    ## Scale all enemy damage
+var wave_spawn_rate: float = 1.0       ## Enemies per second multiplier
+var skeleton_damage_base: float = 1.0  ## Global skeleton damage multiplier
+
+
+## ============================================================================
+## PLAYTEST SUCCESS CRITERIA
+## ============================================================================
+## Use these to validate balance during development:
+##
+## RUN 1 EXPECTATIONS:
+## - Skilled player reaching Dawn = Very hard but possible (< 5% success)
+## - Average player reaching Wave 3 = 50%+ success rate
+## - No player should feel stuck at Wave 1 after 3 attempts
+##
+## ECONOMY VALIDATION:
+## - 10-12 runs to unlock all rank 1 power upgrades
+## - 20-25 runs to unlock all skeleton types
+## - 30-40 runs to "complete" core progression
+##
+## DIFFICULTY CURVE:
+## - Each wave should feel noticeably harder than previous
+## - Wave 5 should feel overwhelming even with good builds
+## - Meta progression should enable new strategies, not trivialize waves
+
+===== ../levels/test_gyms/test_combat.tscn =====
+[gd_scene load_steps=8 format=3 uid="uid://cxm3qh8test01"]
+
+[ext_resource type="PackedScene" uid="uid://do0e0x63rvmxv" path="res://entities/player/player.tscn" id="1_player"]
+[ext_resource type="PackedScene" uid="uid://c2y3qm7x8vh4p" path="res://entities/enemies/enemy.tscn" id="2_enemy"]
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+size = Vector2(50, 50)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_ground"]
+albedo_color = Color(0.2, 0.25, 0.2, 1)
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_heart"]
+top_radius = 0.5
+bottom_radius = 0.5
+height = 1.0
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_heart"]
+albedo_color = Color(0.8, 0.1, 0.1, 1)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_heart"]
+radius = 0.5
+height = 1.0
+
+[sub_resource type="Environment" id="Environment_default"]
+background_mode = 3
+background_color = Color(0.05, 0.08, 0.1, 1)
+ambient_light_color = Color(0.4, 0.45, 0.5, 1)
+ambient_light_energy = 1.2
+
+[node name="TestCombat" type="Node3D"]
+
+[node name="Camera3D" type="Camera3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.707107, -0.707107, 0, 0.707107, 0.707107, 0, 15, 15)
+projection = 0
+current = true
+fov = 70.0
+far = 100.0
+rotation_degrees = Vector3(-45, 0, 0)
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.5, 0.866025, 0, -0.866025, 0.5, 0, 10, 0)
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_default")
+
+[node name="Ground" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_ground")
+surface_material_override/0 = SubResource("StandardMaterial3D_ground")
+
+[node name="Player" parent="." instance=ExtResource("1_player")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0)
+
+[node name="CryptHeart" type="StaticBody3D" parent="." groups=["crypt_heart"]]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, -8)
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="CryptHeart"]
+mesh = SubResource("CylinderMesh_heart")
+surface_material_override/0 = SubResource("StandardMaterial3D_heart")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="CryptHeart"]
+shape = SubResource("CylinderShape3D_heart")
+
+[node name="Enemies" type="Node3D" parent="."]
+
+[node name="Enemy1" parent="Enemies" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 0, 5)
+
+[node name="Enemy2" parent="Enemies" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0, 5)
+
+[node name="Enemy3" parent="Enemies" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 8, 0, 8)
+
+[node name="Enemy4" parent="Enemies" instance=ExtResource("2_enemy")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -8, 0, 8)
+
+===== ../entities/camera/camera_rig.gd =====
+extends Node3D
+
+@export var target_path: NodePath
+@export var smooth_speed: float = 5.0
+
+var target: Node3D
+
+func _ready() -> void:
+	# Find the player in the scene tree
+	if target_path:
+		target = get_node(target_path)
+	else:
+		# Auto-find if not assigned
+		target = get_parent().find_child("Player")
+
+func _process(delta: float) -> void:
+	if not is_instance_valid(target): return
+	
+	# Smoothly interpolate position
+	global_position = global_position.lerp(target.global_position, smooth_speed * delta)
+
+===== ../entities/corpses/corpse.gd =====
+extends Node3D
+class_name Corpse
+
+## ============================================================================
+## CORPSE - Fallen enemy waiting to be raised
+## ============================================================================
+## Spawned when enemies die, can be raised by player pressing 'E' nearby
+## Automatically despawns after a timeout to prevent performance issues
+
+## SCENE SETUP:
+## - Node3D (Root) with this script attached
+## - Add Visual child (MeshInstance3D or Sprite3D) for the corpse visual
+## - Add InteractArea (Area3D) with CollisionShape3D (SphereShape3D, radius ~1.5)
+##   Set InteractArea to Layer 1, Mask 0 (only for detection, not physics)
+
+## ============================================================================
+## CONFIGURATION
+## ============================================================================
+
+@export_group("Raise Settings")
+## Scene to spawn when raised (should be a Skeleton)
+@export var skeleton_scene: PackedScene
+## Time before corpse despawns automatically (prevents clutter)
+@export var despawn_time: float = 60.0
+
+## ============================================================================
+## INTERNAL STATE
+## ============================================================================
+
+var despawn_timer: float = 0.0
+
+## ============================================================================
+## NODE REFERENCES
+## ============================================================================
+
+@onready var visual: Node3D = $Visual
+@onready var interact_area: Area3D = $InteractArea
+
+## ============================================================================
+## INITIALIZATION
+## ============================================================================
+
+func _ready() -> void:
+    add_to_group("corpses")
+    despawn_timer = despawn_time
+
+    # Optional: Add subtle tint for corpses
+    if visual is Sprite3D:
+        visual.modulate = Color(0.7, 0.7, 0.7, 0.8)  # Slightly transparent for sprites
+    elif visual is MeshInstance3D:
+        # For 3D meshes, we'd need to modify the material (skip for now)
+        pass
+
+func _process(delta: float) -> void:
+    # Countdown to despawn
+    despawn_timer -= delta
+    if despawn_timer <= 0:
+        _despawn()
+
+## ============================================================================
+## INTERACTION
+## ============================================================================
+
+func raise() -> void:
+    """Convert this corpse into a living skeleton"""
+    if skeleton_scene == null:
+        push_error("Corpse: No skeleton scene assigned! Cannot raise.")
+        return
+
+    # 1. Spawn Skeleton at corpse location
+    var skeleton = skeleton_scene.instantiate()
+    get_parent().add_child(skeleton)
+    skeleton.global_position = global_position
+    skeleton.global_rotation = global_rotation
+
+    # 2. Visual feedback (you can add particles/sound here)
+    print("[Corpse] Raised into Skeleton at position %s" % global_position)
+
+    # TODO: Play "Raise Dead" particle effect
+    # TODO: Play "Raise Dead" sound effect
+
+    # 3. Delete corpse
+    queue_free()
+
+func _despawn() -> void:
+    """Auto-despawn after timeout"""
+    print("[Corpse] Despawned after %d seconds" % despawn_time)
+    queue_free()
+
+## ============================================================================
+## UTILITY
+## ============================================================================
+
+func is_raiseable() -> bool:
+    """Check if this corpse can be raised"""
+    return skeleton_scene != null
+
+===== ../entities/corpses/corpse.tscn =====
+[gd_scene load_steps=6 format=3 uid="uid://bq7xk5y8m4nhv"]
+
+[ext_resource type="Script" path="res://entities/corpses/corpse.gd" id="1_corpse"]
+[ext_resource type="PackedScene" uid="uid://bw5x8qnavh3cp" path="res://entities/skeletons/skeleton.tscn" id="2_skeleton"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_interact"]
+radius = 1.5
+
+[sub_resource type="BoxMesh" id="BoxMesh_corpse"]
+size = Vector3(0.6, 0.2, 0.4)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_corpse"]
+albedo_color = Color(0.6, 0.6, 0.5, 1)
+
+[node name="Corpse" type="Node3D"]
+script = ExtResource("1_corpse")
+skeleton_scene = ExtResource("2_skeleton")
+despawn_time = 60.0
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+mesh = SubResource("BoxMesh_corpse")
+surface_material_override/0 = SubResource("StandardMaterial3D_corpse")
+
+[node name="InteractArea" type="Area3D" parent="."]
+collision_layer = 1
+collision_mask = 0
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="InteractArea"]
+shape = SubResource("SphereShape3D_interact")
+
+===== ../entities/skeletons/skeleton.tscn =====
+[gd_scene load_steps=5 format=3 uid="uid://bw5x8qnavh3cp"]
+
+[ext_resource type="Script" path="res://entities/skeletons/skeleton.gd" id="1_skeleton"]
+
+[sub_resource type="CapsuleMesh" id="CapsuleMesh_visual"]
+radius = 0.3
+height = 1.5
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_skeleton"]
+albedo_color = Color(0.8, 0.9, 1, 1)
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_skeleton"]
+height = 0.35
+radius = 0.12
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_hit"]
+radius = 0.6
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_detection"]
+radius = 6.0
+
+[node name="Skeleton" type="CharacterBody3D"]
+script = ExtResource("1_skeleton")
+spawn_corpse_on_death = true
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+mesh = SubResource("CapsuleMesh_visual")
+surface_material_override/0 = SubResource("StandardMaterial3D_skeleton")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(3.7, 0, 0, 0, 3.7, 0, 0, 0, 3.7, 0, 0.65, 0)
+shape = SubResource("CylinderShape3D_skeleton")
+
+[node name="HitArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="HitArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("SphereShape3D_hit")
+
+[node name="DetectionArea" type="Area3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DetectionArea"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+shape = SubResource("SphereShape3D_detection")
+
+===== ../entities/skeletons/skeleton.gd =====
+extends CharacterBody3D
+class_name Skeleton
+
+## ============================================================================
+## SKELETON AI - State Machine with Smart Leash Logic
+## ============================================================================
+## Implements the "Combat Lock" + "Leash with Hysteresis" system
+## See vision.md for design philosophy
+
+enum State {
+	FOLLOW,          # Orbit player, attack enemies within combat radius
+	COMBAT_LOCKED,   # Locked in fight, won't rally until enemy dies or player is very far
+	RALLY,           # Sprint to player, ignore enemies (except threats near player)
+	SPAWN_GRACE,     # Invulnerable sprint to player after being raised
+}
+
+## ============================================================================
+## CONFIGURATION (Export Variables for Easy Tuning)
+## ============================================================================
+
+@export_group("Leash Settings")
+## Distance at which skeleton can engage enemies
+@export var combat_radius: float = 6.0
+## Distance at which skeleton triggers RALLY mode (breaks from combat)
+@export var leash_break_distance: float = 15.0
+## Distance at which skeleton exits RALLY and can fight again
+@export var leash_restore_distance: float = 10.0
+## Distance skeleton tries to maintain from player when following
+@export var follow_radius: float = 3.0
+
+@export_group("Movement Speeds")
+## Normal movement speed (following/attacking)
+@export var walk_speed: float = 100.0
+## Speed when rallying back to player (must be faster than player)
+@export var rally_speed: float = 140.0
+
+@export_group("Combat Lock Settings")
+## Maximum distance before skeleton abandons locked combat
+@export var max_combat_lock_distance: float = 25.0
+
+@export_group("Spawn Settings")
+## Duration of invulnerable sprint after being raised
+@export var spawn_grace_duration: float = 1.5
+
+@export_group("Death Settings")
+## Whether to spawn corpse on death (for re-raising)
+@export var spawn_corpse_on_death: bool = true
+
+## ============================================================================
+## INTERNAL STATE
+## ============================================================================
+
+var current_state: State = State.SPAWN_GRACE
+var spawn_grace_timer: float = 0.0
+
+## Reference to the necromancer player
+var player: CharacterBody3D = null
+
+## Enemy currently locked in combat with
+var locked_to_enemy: Node3D = null
+
+## Current target enemy (for attack state)
+var current_target: Node3D = null
+
+## Stats from GameBalance
+var skeleton_type: GameBalance.SkeletonType = GameBalance.SkeletonType.WARRIOR
+var max_hp: float = 20.0
+var current_hp: float = 20.0
+var damage: float = 5.0
+var attack_range: float = 50.0
+
+## Combat tracking
+var last_hit_time: float = 0.0
+var attack_cooldown: float = 1.0
+
+## ============================================================================
+## NODE REFERENCES
+## ============================================================================
+
+@onready var visual: Node3D = $Visual
+@onready var hit_area: Area3D = $HitArea
+@onready var detection_area: Area3D = $DetectionArea
+
+## ============================================================================
+## INITIALIZATION
+## ============================================================================
+
+func _ready() -> void:
+	# Add to skeletons group for enemy detection
+	add_to_group("skeletons")
+
+	# Start in spawn grace period
+	current_state = State.SPAWN_GRACE
+	spawn_grace_timer = spawn_grace_duration
+
+	# Find player in scene
+	player = get_tree().get_first_node_in_group("player")
+
+	if player == null:
+		push_error("Skeleton: No player found in scene! Add player to 'player' group.")
+
+	# Load stats from GameBalance
+	_load_stats()
+
+func _load_stats() -> void:
+	"""Load skeleton stats based on type from GameBalance"""
+	var stats = GameBalance.SKELETON_STATS[skeleton_type]
+	max_hp = stats["hp"]
+	current_hp = max_hp
+	damage = stats["damage"]
+	walk_speed = stats["speed"]
+	attack_range = stats["range"]
+
+	# Rally speed is 40% faster than walk speed
+	rally_speed = walk_speed * 1.4
+
+## ============================================================================
+## MAIN PHYSICS LOOP
+## ============================================================================
+
+func _physics_process(delta: float) -> void:
+	if player == null:
+		return
+	
+	# Handle spawn grace period
+	if current_state == State.SPAWN_GRACE:
+		_handle_spawn_grace(delta)
+		return
+	
+	# Get distance to player
+	var dist_to_player = global_position.distance_to(player.global_position)
+	
+	# === PRIORITY 1: Combat Lock (don't abandon active fights) ===
+	if locked_to_enemy != null:
+		if is_instance_valid(locked_to_enemy) and not _is_enemy_dead(locked_to_enemy):
+			if dist_to_player < max_combat_lock_distance:
+				current_state = State.COMBAT_LOCKED
+				_attack_enemy(locked_to_enemy, delta)
+				return
+		# Enemy died or player too far - unlock
+		locked_to_enemy = null
+	
+	# === PRIORITY 2: Vengeance (player took damage) ===
+	if player.has_method("get_last_attacker"):
+		var attacker = player.get_last_attacker()
+		if attacker != null and is_instance_valid(attacker):
+			var dist_to_attacker = global_position.distance_to(attacker.global_position)
+			if dist_to_attacker < 12.0:  # Bodyguard radius
+				locked_to_enemy = attacker
+				current_state = State.COMBAT_LOCKED
+				_attack_enemy(attacker, delta)
+				return
+	
+	# === PRIORITY 3: Leash (player too far) ===
+	if dist_to_player > leash_break_distance:
+		current_state = State.RALLY
+		_rally_to_player(delta)
+		return
+	
+	# === PRIORITY 4: Restore from rally ===
+	if current_state == State.RALLY and dist_to_player < leash_restore_distance:
+		current_state = State.FOLLOW
+	
+	# === PRIORITY 5: Combat (enemies nearby) ===
+	var nearest_enemy = _find_nearest_enemy_in_radius(combat_radius)
+	if nearest_enemy != null:
+		locked_to_enemy = nearest_enemy
+		current_state = State.COMBAT_LOCKED
+		_attack_enemy(nearest_enemy, delta)
+		return
+	
+	# === PRIORITY 6: Follow/Orbit ===
+	_orbit_player(delta)
+
+## ============================================================================
+## STATE HANDLERS
+## ============================================================================
+
+func _handle_spawn_grace(delta: float) -> void:
+	"""Sprint to player with invulnerability for spawn_grace_duration"""
+	spawn_grace_timer -= delta
+
+	if spawn_grace_timer <= 0:
+		current_state = State.FOLLOW
+		# Reset color when spawn grace ends
+		if visual is MeshInstance3D:
+			var mesh = visual as MeshInstance3D
+			var mat = mesh.get_active_material(0)
+			if mat is StandardMaterial3D:
+				(mat as StandardMaterial3D).albedo_color = Color(0.8, 0.9, 1, 1)
+		elif visual is Sprite3D:
+			visual.modulate = Color.WHITE
+		return
+	
+	# Sprint directly to player
+	var direction = (player.global_position - global_position).normalized()
+	velocity = direction * rally_speed
+	move_and_slide()
+
+	# Visual: Green tint to show invulnerability during spawn grace
+	if visual is MeshInstance3D:
+		var mesh = visual as MeshInstance3D
+		var mat = mesh.get_active_material(0)
+		if mat is StandardMaterial3D:
+			(mat as StandardMaterial3D).albedo_color = Color(0.5, 1.0, 0.5, 1.0)
+	elif visual is Sprite3D:
+		visual.modulate = Color(0.5, 1.0, 0.5, 0.7)
+
+func _rally_to_player(_delta: float) -> void:
+	"""Sprint to player, ignore enemies unless threatening player"""
+	var direction = (player.global_position - global_position).normalized()
+	velocity = direction * rally_speed
+	move_and_slide()
+	
+	# Check for enemies threatening player (within 3m of player)
+	var threats = _find_enemies_near_position(player.global_position, 3.0)
+	if threats.size() > 0:
+		# Defend player from closest threat
+		locked_to_enemy = threats[0]
+		current_state = State.COMBAT_LOCKED
+
+func _orbit_player(delta: float) -> void:
+	"""Stay near player, maintain follow_radius distance"""
+	var dist_to_player = global_position.distance_to(player.global_position)
+	
+	if dist_to_player > follow_radius:
+		# Move towards player
+		var direction = (player.global_position - global_position).normalized()
+		velocity = direction * walk_speed
+		move_and_slide()
+	else:
+		# Close enough, idle
+		velocity = velocity.move_toward(Vector3.ZERO, walk_speed * delta)
+		move_and_slide()
+
+func _attack_enemy(enemy: Node3D, _delta: float) -> void:
+	"""Move to enemy and attack"""
+	var dist_to_enemy = global_position.distance_to(enemy.global_position)
+	
+	if dist_to_enemy > attack_range:
+		# Move towards enemy
+		var direction = (enemy.global_position - global_position).normalized()
+		velocity = direction * walk_speed
+		move_and_slide()
+	else:
+		# In range, attack
+		velocity = Vector3.ZERO
+		move_and_slide()
+		
+		# Attack cooldown
+		if Time.get_ticks_msec() - last_hit_time > attack_cooldown * 1000:
+			_deal_damage(enemy)
+			last_hit_time = Time.get_ticks_msec()
+
+## ============================================================================
+## COMBAT FUNCTIONS
+## ============================================================================
+
+func _deal_damage(enemy: Node3D) -> void:
+	"""Deal damage to an enemy"""
+	if enemy.has_method("take_damage"):
+		enemy.take_damage(damage)
+		print("[Skeleton] Hit enemy for %d damage" % damage)
+
+func take_damage(amount: float) -> void:
+	"""Called when skeleton takes damage"""
+	current_hp -= amount
+
+	# Visual feedback - flash red when hit
+	if visual is MeshInstance3D:
+		var mesh = visual as MeshInstance3D
+		var mat = mesh.get_active_material(0)
+		if mat is StandardMaterial3D:
+			(mat as StandardMaterial3D).albedo_color = Color.RED
+			await get_tree().create_timer(0.1).timeout
+			(mat as StandardMaterial3D).albedo_color = Color(0.8, 0.9, 1, 1)  # Return to normal skeleton color
+	elif visual is Sprite3D:
+		visual.modulate = Color.RED
+		await get_tree().create_timer(0.1).timeout
+		visual.modulate = Color.WHITE
+
+	if current_hp <= 0:
+		_die()
+
+func _die() -> void:
+	"""Handle skeleton death - turn back into corpse"""
+	print("[Skeleton] Crumbled!")
+
+	# Spawn corpse at death location (can be re-raised!)
+	if spawn_corpse_on_death:
+		# Use preload to avoid circular dependency
+		var corpse_scene = preload("res://entities/corpses/corpse.tscn")
+		var corpse = corpse_scene.instantiate()
+		get_parent().add_child(corpse)
+		corpse.global_position = global_position
+		corpse.global_rotation = global_rotation
+		print("[Skeleton] Spawned corpse at position %s" % global_position)
+
+	# TODO: Play death animation/particle effect
+
+	queue_free()
+
+## ============================================================================
+## ENEMY DETECTION
+## ============================================================================
+
+func _find_nearest_enemy_in_radius(radius: float) -> Node3D:
+	"""Find the nearest enemy within detection radius"""
+	var enemies = get_tree().get_nodes_in_group("enemies")
+	var nearest: Node3D = null
+	var nearest_dist: float = radius + 1.0
+	
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or _is_enemy_dead(enemy):
+			continue
+		
+		var dist = global_position.distance_to(enemy.global_position)
+		if dist < radius and dist < nearest_dist:
+			nearest = enemy
+			nearest_dist = dist
+	
+	return nearest
+
+func _find_enemies_near_position(pos: Vector3, radius: float) -> Array:
+	"""Find all enemies within radius of a position"""
+	var enemies = get_tree().get_nodes_in_group("enemies")
+	var nearby: Array = []
+	
+	for enemy in enemies:
+		if not is_instance_valid(enemy) or _is_enemy_dead(enemy):
+			continue
+		
+		var dist = pos.distance_to(enemy.global_position)
+		if dist < radius:
+			nearby.append(enemy)
+	
+	# Sort by distance (closest first)
+	nearby.sort_custom(func(a, b): return pos.distance_to(a.global_position) < pos.distance_to(b.global_position))
+	
+	return nearby
+
+func _is_enemy_dead(enemy: Node3D) -> bool:
+	"""Check if an enemy is dead"""
+	if enemy.has_method("is_dead"):
+		return enemy.is_dead()
+	return false
+
+## ============================================================================
+## DEBUG VISUALIZATION
+## ============================================================================
+
+func _draw() -> void:
+	"""Draw debug circles showing detection/leash radii (only in editor)"""
+	if not Engine.is_editor_hint():
+		return
+	
+	# Draw combat radius (green)
+	_draw_circle_3d(Vector3.ZERO, combat_radius, Color.GREEN)
+	
+	# Draw leash break distance (red)
+	_draw_circle_3d(Vector3.ZERO, leash_break_distance, Color.RED)
+	
+	# Draw leash restore distance (yellow)
+	_draw_circle_3d(Vector3.ZERO, leash_restore_distance, Color.YELLOW)
+
+func _draw_circle_3d(_center: Vector3, _radius: float, _color: Color) -> void:
+	"""Helper to draw a circle in 3D space"""
+	# This would need to be implemented with ImmediateMesh or debug draw
+	pass
+
+## ============================================================================
+## UTILITY
+## ============================================================================
+
+func get_state_name() -> String:
+	"""Get current state as string for debugging"""
+	match current_state:
+		State.FOLLOW: return "FOLLOW"
+		State.COMBAT_LOCKED: return "COMBAT_LOCKED"
+		State.RALLY: return "RALLY"
+		State.SPAWN_GRACE: return "SPAWN_GRACE"
+		_: return "UNKNOWN"
+
+===== ../entities/projectiles/soul_bolt.tscn =====
+[gd_scene load_steps=4 format=3 uid="uid://cm3k8p5yh6wxa"]
+
+[ext_resource type="Script" path="res://entities/projectiles/soul_bolt.gd" id="1_soul_bolt"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_bolt"]
+radius = 0.3
+
+[sub_resource type="SphereMesh" id="SphereMesh_visual"]
+radius = 0.2
+height = 0.4
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_bolt"]
+albedo_color = Color(0.5, 1, 1, 1)
+emission_enabled = true
+emission = Color(0.5, 1, 1, 1)
+emission_energy_multiplier = 2.0
+
+[node name="SoulBolt" type="Area3D"]
+collision_layer = 2
+collision_mask = 1
+script = ExtResource("1_soul_bolt")
+speed = 600.0
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+mesh = SubResource("SphereMesh_visual")
+surface_material_override/0 = SubResource("StandardMaterial3D_bolt")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("SphereShape3D_bolt")
+
+===== ../entities/projectiles/soul_bolt.gd =====
+extends Area3D
+class_name SoulBolt
+
+## ============================================================================
+## SOUL BOLT - Player's basic attack projectile
+## ============================================================================
+## Travels in a straight line, damages first enemy hit, then despawns
+
+## SCENE SETUP:
+## - Area3D (Root) with this script
+## - Add Visual child (MeshInstance3D or Sprite3D) for the bolt visual
+## - Add CollisionShape3D (SphereShape3D, radius ~0.3)
+##   Set to Layer 2, Mask 1 (hits enemies but not player)
+
+## ============================================================================
+## CONFIGURATION
+## ============================================================================
+
+@export_group("Projectile Settings")
+## Speed of projectile movement
+@export var speed: float = 600.0
+## Damage dealt on hit
+@export var damage: float = 10.0
+## Maximum lifetime before auto-despawn
+@export var lifetime: float = 3.0
+
+## ============================================================================
+## INTERNAL STATE
+## ============================================================================
+
+var direction: Vector3 = Vector3.FORWARD
+var lifetime_timer: float = 0.0
+var owner_node: Node3D = null  # Who shot this (to avoid self-damage)
+
+## ============================================================================
+## INITIALIZATION
+## ============================================================================
+
+func _ready() -> void:
+    add_to_group("projectiles")
+    lifetime_timer = lifetime
+
+    # Connect collision signals
+    body_entered.connect(_on_body_entered)
+    area_entered.connect(_on_area_entered)
+
+func _process(delta: float) -> void:
+    # Move forward
+    global_position += direction * speed * delta
+
+    # Lifetime countdown
+    lifetime_timer -= delta
+    if lifetime_timer <= 0:
+        queue_free()
+
+## ============================================================================
+## COLLISION HANDLING
+## ============================================================================
+
+func _on_body_entered(body: Node3D) -> void:
+    """Hit a physics body (enemy, wall, etc.)"""
+    # Check if it's an enemy
+    if body.is_in_group("enemies") and body != owner_node:
+        _hit_enemy(body)
+
+func _on_area_entered(area: Area3D) -> void:
+    """Hit an area (could be enemy hitbox)"""
+    var parent = area.get_parent()
+    if parent and parent.is_in_group("enemies") and parent != owner_node:
+        _hit_enemy(parent)
+
+func _hit_enemy(enemy: Node3D) -> void:
+    """Deal damage to enemy and despawn"""
+    if enemy.has_method("take_damage"):
+        enemy.take_damage(damage, owner_node)
+        print("[SoulBolt] Hit enemy for %d damage" % damage)
+
+    # TODO: Play hit particle effect
+    # TODO: Play hit sound effect
+
+    queue_free()
+
+## ============================================================================
+## SETUP
+## ============================================================================
+
+func setup(start_pos: Vector3, shoot_direction: Vector3, shooter: Node3D) -> void:
+    """Initialize projectile with position, direction, and owner"""
+    global_position = start_pos
+    direction = shoot_direction.normalized()
+    owner_node = shooter
+
+    # Rotate visual to face direction
+    if direction.length() > 0.01:
+        look_at(global_position + direction, Vector3.UP)
+
+===== ../entities/enemies/enemy.gd =====
+extends CharacterBody3D
+class_name Enemy
+
+## ============================================================================
+## ENEMY BASE CLASS - Implements Aggro System for Bone & Barrow
+## ============================================================================
+## Enemies march toward Crypt Heart/Player by default
+## They only attack skeletons when:
+## 1. They collide with a skeleton
+## 2. They take damage from a skeleton
+
+enum EnemyState {
+	MARCHING,      # Moving toward primary target (Heart or Player)
+	ATTACKING,     # Fighting a skeleton that provoked them
+}
+
+## ============================================================================
+## CONFIGURATION
+## ============================================================================
+
+@export_group("Enemy Type")
+@export var enemy_type: GameBalance.EnemyType = GameBalance.EnemyType.SQUIRE
+
+@export_group("Target Settings")
+## Primary target (Crypt Heart or Player if none)
+@export var primary_target: Node3D = null
+
+@export_group("Drops")
+## Corpse scene to spawn when this enemy dies
+@export var corpse_scene: PackedScene
+
+## ============================================================================
+## INTERNAL STATE
+## ============================================================================
+
+var current_state: EnemyState = EnemyState.MARCHING
+var current_target: Node3D = null
+var aggro_target: Node3D = null  # Skeleton that provoked us
+
+## Stats from GameBalance
+var max_hp: float = 30.0
+var current_hp: float = 30.0
+var damage: float = 10.0
+var speed: float = 280.0
+var attack_range: float = 50.0
+
+## Combat tracking
+var last_hit_time: float = 0.0
+var attack_cooldown: float = 1.0
+
+## ============================================================================
+## NODE REFERENCES
+## ============================================================================
+
+@onready var visual: Node3D = $Visual
+@onready var collision_shape: CollisionShape3D = $CollisionShape3D
+
+## ============================================================================
+## INITIALIZATION
+## ============================================================================
+
+func _ready() -> void:
+	add_to_group("enemies")
+	
+	# Load stats from GameBalance
+	_load_stats()
+	
+	# Find primary target (Crypt Heart)
+	if primary_target == null:
+		primary_target = get_tree().get_first_node_in_group("crypt_heart")
+	
+	# If no heart, target player
+	if primary_target == null:
+		primary_target = get_tree().get_first_node_in_group("player")
+	
+	if primary_target == null:
+		push_error("Enemy: No primary target (Crypt Heart or Player) found!")
+	
+	current_target = primary_target
+
+func _load_stats() -> void:
+	"""Load enemy stats based on type from GameBalance"""
+	var stats = GameBalance.ENEMY_STATS[enemy_type]
+	max_hp = stats["hp"]
+	current_hp = max_hp
+	speed = stats["speed"]
+	damage = stats["damage"]
+	attack_range = stats["attack_range"]
+
+## ============================================================================
+## MAIN PHYSICS LOOP
+## ============================================================================
+
+func _physics_process(_delta: float) -> void:
+	if current_target == null:
+		return
+
+	# Check if aggro target is still valid
+	if aggro_target != null:
+		if not is_instance_valid(aggro_target) or _is_target_dead(aggro_target):
+			# Skeleton died - return to marching
+			aggro_target = null
+			current_target = primary_target
+			current_state = EnemyState.MARCHING
+
+	# Move toward current target
+	var dist_to_target = global_position.distance_to(current_target.global_position)
+
+	if dist_to_target > attack_range:
+		# Move toward target
+		var direction = (current_target.global_position - global_position).normalized()
+		velocity = direction * speed
+		move_and_slide()
+
+		# Check for collisions with skeletons after moving
+		_check_collision_aggro()
+	else:
+		# In range, attack
+		velocity = Vector3.ZERO
+		move_and_slide()
+
+		# Attack cooldown
+		if Time.get_ticks_msec() - last_hit_time > attack_cooldown * 1000:
+			_deal_damage(current_target)
+			last_hit_time = Time.get_ticks_msec()
+
+## ============================================================================
+## AGGRO SYSTEM
+## ============================================================================
+
+func _check_collision_aggro() -> void:
+	"""Check if we collided with a skeleton during move_and_slide"""
+	for i in range(get_slide_collision_count()):
+		var collision_info = get_slide_collision(i)
+		var collider = collision_info.get_collider()
+		if collider is Node and collider.is_in_group("skeletons"):
+			_aggro_onto(collider)
+			break
+
+func take_damage(amount: float, attacker: Node3D = null) -> void:
+	"""Damage Aggro: When skeleton damages us"""
+	current_hp -= amount
+
+	# Visual feedback
+	if visual is MeshInstance3D:
+		var mesh = visual as MeshInstance3D
+		var mat = mesh.get_active_material(0)
+		if mat is StandardMaterial3D:
+			(mat as StandardMaterial3D).albedo_color = Color.WHITE
+			await get_tree().create_timer(0.1).timeout
+			(mat as StandardMaterial3D).albedo_color = Color(1, 0.3, 0.3, 1)
+	elif visual:
+		visual.modulate = Color.WHITE
+		await get_tree().create_timer(0.1).timeout
+		visual.modulate = Color(1, 0.3, 0.3, 1)
+	
+	# Switch target to attacker if it's a skeleton
+	if attacker != null and attacker.is_in_group("skeletons"):
+		_aggro_onto(attacker)
+	
+	if current_hp <= 0:
+		_die()
+
+func _aggro_onto(skeleton: Node3D) -> void:
+	"""Switch target to a skeleton that provoked us"""
+	aggro_target = skeleton
+	current_target = skeleton
+	current_state = EnemyState.ATTACKING
+	print("[Enemy] Aggro'd onto skeleton!")
+
+## ============================================================================
+## COMBAT
+## ============================================================================
+
+func _deal_damage(target: Node3D) -> void:
+	"""Deal damage to current target"""
+	if target.has_method("take_damage"):
+		target.take_damage(damage, self)
+		print("[Enemy] Hit target for %d damage" % damage)
+
+func _die() -> void:
+	"""Handle enemy death"""
+	print("[Enemy] Died!")
+
+	# Spawn corpse at death location
+	if corpse_scene:
+		var corpse = corpse_scene.instantiate()
+		get_parent().add_child(corpse)
+		corpse.global_position = global_position
+		corpse.global_rotation = global_rotation
+		print("[Enemy] Spawned corpse at position %s" % global_position)
+	else:
+		push_warning("Enemy: No corpse scene assigned! Cannot spawn corpse.")
+
+	# TODO: Drop souls for player
+	# TODO: Play death animation/particles
+
+	queue_free()
+
+## ============================================================================
+## UTILITY
+## ============================================================================
+
+func _is_target_dead(target: Node3D) -> bool:
+	"""Check if a target is dead"""
+	if target.has_method("is_dead"):
+		return target.is_dead()
+	return false
+
+func is_dead() -> bool:
+	"""Check if this enemy is dead"""
+	return current_hp <= 0
+
+func get_state_name() -> String:
+	"""Get current state as string for debugging"""
+	match current_state:
+		EnemyState.MARCHING: return "MARCHING"
+		EnemyState.ATTACKING: return "ATTACKING"
+		_: return "UNKNOWN"
+
+===== ../entities/enemies/enemy.tscn =====
+[gd_scene load_steps=5 format=3 uid="uid://c2y3qm7x8vh4p"]
+
+[ext_resource type="Script" path="res://entities/enemies/enemy.gd" id="1_enemy"]
+[ext_resource type="PackedScene" uid="uid://bq7xk5y8m4nhv" path="res://entities/corpses/corpse.tscn" id="2_corpse"]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_enemy"]
+height = 0.4
+radius = 0.15
+
+[sub_resource type="BoxMesh" id="BoxMesh_placeholder"]
+size = Vector3(0.5, 0.8, 0.3)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_enemy"]
+albedo_color = Color(1, 0.3, 0.3, 1)
+
+[node name="Enemy" type="CharacterBody3D"]
+script = ExtResource("1_enemy")
+corpse_scene = ExtResource("2_corpse")
+
+[node name="Visual" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.4, 0)
+mesh = SubResource("BoxMesh_placeholder")
+surface_material_override/0 = SubResource("StandardMaterial3D_enemy")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+shape = SubResource("CylinderShape3D_enemy")
+
+===== ../entities/player/player.tscn =====
+[gd_scene load_steps=9 format=3 uid="uid://do0e0x63rvmxv"]
+
+[ext_resource type="Script" uid="uid://mlfdfkkkhvie" path="res://entities/player/player.gd" id="1_8fjmc"]
+[ext_resource type="PackedScene" uid="uid://cm3k8p5yh6wxa" path="res://entities/projectiles/soul_bolt.tscn" id="2_soul_bolt"]
+[ext_resource type="Texture2D" uid="uid://ds3x4t36xxiwt" path="res://assets/sprites/player/1.png" id="1_fkugw"]
+[ext_resource type="Texture2D" uid="uid://dkiwks56d46hi" path="res://assets/sprites/player/2.png" id="2_8fjmc"]
+[ext_resource type="Texture2D" uid="uid://4v55wp5d1plc" path="res://assets/sprites/player/3.png" id="3_qiwj3"]
+[ext_resource type="Texture2D" uid="uid://hq2ll8mehge3" path="res://assets/sprites/player/4.png" id="4_26q78"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_wvtmh"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_fkugw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_8fjmc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_qiwj3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_26q78")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 12.0
+}]
+
+[sub_resource type="CylinderShape3D" id="CylinderShape3D_fkugw"]
+height = 0.35797763
+radius = 0.12890625
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_8fjmc")
+soul_bolt_scene = ExtResource("2_soul_bolt")
+
+[node name="AnimatedSprite3D" type="AnimatedSprite3D" parent="."]
+transform = Transform3D(1.42, 0, 0, 0, 1.42, 0, 0, 0, 1.42, 0, 0.816545, 0)
+pixel_size = 0.0025
+billboard = 1
+texture_filter = 5
+sprite_frames = SubResource("SpriteFrames_wvtmh")
+animation = &"idle"
+frame_progress = 0.3958217
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(3.7, 0, 0, 0, 3.7, 0, 0, 0, 3.7, 0, 0.6620525, 0)
+shape = SubResource("CylinderShape3D_fkugw")
+
+===== ../entities/player/player.gd =====
+extends CharacterBody3D
+
+## ============================================================================
+## PLAYER / NECROMANCER
+## ============================================================================
+## The player character - a lonely lich defending their graveyard
+
+# --- TUNING KNOBS ---
+@export var speed: float = 8.0
+@export var acceleration: float = 50.0
+@export var friction: float = 80.0
+
+@export_group("Necromancy")
+## Distance from which player can raise corpses
+@export var interact_range: float = 2.5
+
+@export_group("Combat")
+## Soul bolt projectile scene
+@export var soul_bolt_scene: PackedScene
+## Direction player is facing (for shooting)
+@export var shoot_direction: Vector3 = Vector3.FORWARD
+
+## ============================================================================
+## COMBAT TRACKING (for Skeleton Vengeance System)
+## ============================================================================
+
+## Last enemy that damaged the player (for skeleton AI vengeance trigger)
+var last_attacker: Node3D = null
+var last_attack_time: float = 0.0
+
+## Health tracking
+var max_hp: float = 100.0
+var current_hp: float = 100.0
+
+## Combat tracking
+var last_shot_time: float = 0.0
+var shot_cooldown: float = 0.5  # From GameBalance
+
+# --- NODES ---
+@onready var visual: AnimatedSprite3D = $AnimatedSprite3D
+
+func _ready() -> void:
+	add_to_group("player")
+	
+	# Load stats from GameBalance
+	max_hp = GameBalance.PLAYER_BASE_HP
+	current_hp = max_hp
+	shot_cooldown = GameBalance.SOUL_BOLT_COOLDOWN
+
+func _physics_process(delta: float) -> void:
+	# 1. GET INPUT
+	# We switched to "ui_" actions which exist by default (Arrow Keys / WASD)
+	var input_dir := Input.get_vector("ui_left", "ui_right", "ui_up", "ui_down")
+	
+	# Convert 2D input (X, Y) to 3D direction (X, Z)
+	var direction := Vector3(input_dir.x, 0, input_dir.y).normalized()
+	
+	if direction:
+		# --- WE ARE MOVING ---
+		# Accelerate towards the direction
+		velocity.x = move_toward(velocity.x, direction.x * speed, acceleration * delta)
+		velocity.z = move_toward(velocity.z, direction.z * speed, acceleration * delta)
+
+		# Update facing direction for shooting
+		shoot_direction = direction
+
+		# Play animation (only if it's not already playing)
+		if not visual.is_playing():
+			visual.play("idle")
+
+		# Flip sprite based on direction
+		if direction.x < 0:
+			visual.flip_h = true
+		elif direction.x > 0:
+			visual.flip_h = false
+			
+	else:
+		# --- WE ARE STOPPING ---
+		# Apply friction to slow down
+		velocity.x = move_toward(velocity.x, 0, friction * delta)
+		velocity.z = move_toward(velocity.z, 0, friction * delta)
+		
+		# If we are basically stopped, freeze the animation
+		if velocity.length() < 0.1:
+			visual.frame = 0  # Snap to the first frame (Standing still)
+			visual.stop()     # Stop playing the loop
+
+	# Apply the physics
+	move_and_slide()
+
+	# 4. HANDLE SHOOTING (Soul Bolt)
+	if Input.is_action_pressed("shoot"):
+		_try_shoot()
+
+	# 5. HANDLE INTERACTION (Raise Dead)
+	if Input.is_action_just_pressed("interact"):
+		_try_raise_dead()
+
+## ============================================================================
+## COMBAT FUNCTIONS
+## ============================================================================
+
+func take_damage(amount: float, attacker: Node3D = null) -> void:
+	"""Called when player takes damage"""
+	current_hp -= amount
+	
+	# Track attacker for skeleton vengeance system
+	if attacker != null:
+		last_attacker = attacker
+		last_attack_time = Time.get_ticks_msec() / 1000.0
+	
+	# Visual feedback
+	if visual:
+		visual.modulate = Color.RED
+		await get_tree().create_timer(0.1).timeout
+		visual.modulate = Color.WHITE
+	
+	print("[Player] Took %d damage! HP: %d/%d" % [amount, current_hp, max_hp])
+	
+	if current_hp <= 0:
+		_die()
+
+func get_last_attacker() -> Node3D:
+	"""Get the last enemy that attacked the player (for skeleton vengeance)"""
+	# Only return attacker if attack was recent (within last 2 seconds)
+	if last_attacker != null:
+		var time_since_attack = (Time.get_ticks_msec() / 1000.0) - last_attack_time
+		if time_since_attack < 2.0 and is_instance_valid(last_attacker):
+			return last_attacker
+	return null
+
+func _die() -> void:
+	"""Handle player death"""
+	print("[Player] Died!")
+	# TODO: Game over logic
+	# TODO: Play death animation
+	# For now, just reset HP (for testing)
+	current_hp = max_hp
+
+func _try_shoot() -> void:
+	"""Shoot soul bolt if cooldown is ready"""
+	var current_time = Time.get_ticks_msec() / 1000.0
+
+	# Check cooldown
+	if current_time - last_shot_time < shot_cooldown:
+		return
+
+	if soul_bolt_scene == null:
+		push_error("Player: No soul bolt scene assigned!")
+		return
+
+	# Spawn projectile
+	var bolt = soul_bolt_scene.instantiate()
+	get_parent().add_child(bolt)
+
+	# Position slightly in front of player
+	var spawn_offset = shoot_direction * 0.5
+	bolt.global_position = global_position + spawn_offset + Vector3(0, 0.5, 0)
+
+	# Setup projectile with direction and damage
+	if bolt.has_method("setup"):
+		bolt.setup(bolt.global_position, shoot_direction, self)
+		bolt.damage = GameBalance.SOUL_BOLT_DAMAGE
+
+	last_shot_time = current_time
+	print("[Player] Shot soul bolt!")
+
+	# TODO: Play shoot animation
+	# TODO: Play shoot sound effect
+
+## ============================================================================
+## NECROMANCY
+## ============================================================================
+
+func _try_raise_dead() -> void:
+	"""Find nearest corpse and raise it"""
+	var corpses = get_tree().get_nodes_in_group("corpses")
+	var nearest: Node3D = null
+	var nearest_dist: float = interact_range
+
+	for corpse in corpses:
+		if not is_instance_valid(corpse):
+			continue
+
+		var dist = global_position.distance_to(corpse.global_position)
+		if dist < nearest_dist:
+			nearest = corpse
+			nearest_dist = dist
+
+	if nearest and nearest.has_method("raise"):
+		nearest.raise()
+		print("[Player] Raised corpse at distance %.1fm" % nearest_dist)
+		# TODO: Play "Cast Spell" animation
+		# TODO: Play raise spell sound effect
+	else:
+		print("[Player] No corpses nearby to raise.")
+
+===== ../character_body_3d.tscn =====
+[gd_scene format=3 uid="uid://cn52ubsweq4hd"]
+
+[node name="CharacterBody3D" type="CharacterBody3D"]
+

@@ -18,7 +18,7 @@ class_name SoulBolt
 
 @export_group("Projectile Settings")
 ## Speed of projectile movement
-@export var speed: float = 600.0
+@export var speed: float = 15.0
 ## Damage dealt on hit
 @export var damage: float = 10.0
 ## Maximum lifetime before auto-despawn

@@ -9,7 +9,9 @@ I've implemented the complete **Skeleton AI System** for Bone & Barrow with all 
 ## 📁 New Files Created
 
 ### 1. **Skeleton AI** (`entities/skeletons/skeleton.gd`)
+
 Complete state machine with:
+
 - ✅ **Combat Lock** - Skeletons finish fights before regrouping
 - ✅ **Leash with Hysteresis** - Smooth follow behavior (15m break, 10m restore)
 - ✅ **Vengeance Trigger** - Attack enemies that hit the player
@@ -19,7 +21,9 @@ Complete state machine with:
 **Lines of Code**: ~350 (heavily documented)
 
 ### 2. **Enemy Aggro System** (`entities/enemies/enemy.gd`)
+
 Smart aggro that makes skeletons feel like "ablative armor":
+
 - ✅ **Collision Aggro** - Enemies attack skeletons they bump into
 - ✅ **Damage Aggro** - Enemies attack skeletons that damage them
 - ✅ **Return to Marching** - After killing skeleton, resume attacking Heart/Player
@@ -28,7 +32,9 @@ Smart aggro that makes skeletons feel like "ablative armor":
 **Lines of Code**: ~200
 
 ### 3. **Player Updates** (`entities/player/player.gd`)
+
 Added vengeance tracking:
+
 - ✅ **Last Attacker Tracking** - Remembers who hit the player (2s window)
 - ✅ **Health System** - Damage tracking, death handling
 - ✅ **Integration** - Works seamlessly with skeleton AI
@@ -36,6 +42,7 @@ Added vengeance tracking:
 **Lines of Code**: +40 to existing script
 
 ### 4. **Documentation**
+
 - ✅ **Technical Reference** (`skeleton_ai_implementation.md`) - 400 lines, explains every system
 - ✅ **Setup Guide** (`setup_guide.md`) - Step-by-step instructions to get testing
 
@@ -49,19 +56,14 @@ Skeletons make decisions in this order:
 
 1. **Combat Lock** (highest priority)
    - "Am I fighting an enemy? Keep fighting unless player is 25m+ away"
-   
 2. **Vengeance**
    - "Did the player get hit? Attack the attacker if I'm within 12m"
-   
 3. **Leash Break**
    - "Is player 15m+ away? Sprint back to them"
-   
 4. **Leash Restore**
    - "Am I rallying and now within 10m? Resume normal behavior"
-   
 5. **Combat**
    - "Are there enemies within 6m? Attack them"
-   
 6. **Follow** (default)
    - "Orbit the player at 3m distance"
 
@@ -89,12 +91,15 @@ Skeletons make decisions in this order:
 ## 🎯 What Makes This Special
 
 ### 1. **No Micromanagement**
+
 - Zero buttons for commanding skeletons
 - They just **work** based on proximity
 - Player focuses on positioning and raising
 
 ### 2. **Solves "The AI Demon"**
+
 We discussed how minion games are uniquely hard. This system solves:
+
 - ❌ Skeletons getting stuck → **Spawn grace + teleport fallback**
 - ❌ Army scattering → **Leash system keeps them grouped**
 - ❌ Abandoning fights → **Combat lock prevents premature retreat**
@@ -102,12 +107,15 @@ We discussed how minion games are uniquely hard. This system solves:
 - ❌ Feeling dumb → **Priority system makes tactical sense**
 
 ### 3. **Hides AI Flaws**
+
 The Crumble → Re-Raise loop naturally fixes problems:
+
 - Skeleton stuck? He'll die soon (low HP)
 - Skeleton doing something weird? Raise a new one from a fresh corpse
 - AI breaks? Just raise more skeletons
 
 ### 4. **Performance Ready**
+
 - No complex pathfinding (not needed for open graveyard)
 - Distance checks use efficient vector math
 - Enemy detection uses groups (not raycasts)
@@ -129,6 +137,7 @@ rally_speed: 140.0              # Sprint speed (40% faster than walk)
 ```
 
 **Playtesting Recommendations**:
+
 - Start with defaults
 - If skeletons feel "scattered" → reduce `leash_break` to 12m
 - If skeletons feel "too sticky" to fights → reduce `max_combat_lock` to 20m
@@ -139,12 +148,15 @@ rally_speed: 140.0              # Sprint speed (40% faster than walk)
 ## 📋 What You Need to Do
 
 ### Immediate (to test AI):
+
 1. **Create Scene Files**
+
    - `skeleton.tscn` with CharacterBody3D + Visual + Collision
    - `enemy.tscn` with CharacterBody3D + Visual + Collision
    - See `setup_guide.md` for exact node structure
 
 2. **Add Placeholder Sprites**
+
    - Use colored rectangles for now (fastest)
    - Player = Blue, Skeleton = White, Enemy = Red
 
@@ -153,6 +165,7 @@ rally_speed: 140.0              # Sprint speed (40% faster than walk)
    - Run and verify basic following
 
 ### Later (polish):
+
 - Corpse spawning system
 - Raise mechanic (press E)
 - Soul economy
@@ -166,15 +179,19 @@ rally_speed: 140.0              # Sprint speed (40% faster than walk)
 From our extensive discussion:
 
 ### **Why This Is Hard**
+
 > "Minion games fight the AI Demon. Every other genre has easier demons."
 
 ### **Why This Is Right**
+
 > "You're trading logic complexity for content complexity. Better for solo dev."
 
 ### **Why It Works**
+
 > "Skeletons are ablative armor. Every hit they take is one you didn't."
 
 ### **The Secret Weapon**
+
 > "The Crumble → Re-Raise loop naturally fixes AI failures."
 
 ---
@@ -222,12 +239,14 @@ _developer/docs/technical/
 **Target**: 50 units (20 skeletons + 30 enemies) at 60 FPS
 
 **Optimizations in place**:
+
 - Groups for entity queries (not scene tree searches)
 - Distance checks (cheap vector math)
 - State caching (avoid redundant calculations)
 - No raycasts or complex pathfinding
 
 **Future optimizations** (if needed):
+
 - Spatial hashing for enemy detection
 - Update expensive logic every 3-5 frames
 - Object pooling for skeletons/corpses
@@ -241,6 +260,7 @@ You shouldn't need these for MVP, but they're easy adds if performance becomes a
 > "This is complex. Is it because of necromancer stuff?"
 
 **Answer**: Yes! Minion AI is one of the hardest systems to implement well. But we chose this demon intentionally:
+
 - **Pro**: Logic is brute-forceable with AI tools (like this)
 - **Pro**: Content is emergent (skeletons ARE the content)
 - **Pro**: No level design needed (open arena)
@@ -248,6 +268,7 @@ You shouldn't need these for MVP, but they're easy adds if performance becomes a
 - **Con**: Edge cases multiply with 20+ units
 
 We mitigated the cons with:
+
 - Clear state priority (no ambiguity)
 - Extensive exports (easy tuning)
 - Heavy documentation (understanding)
@@ -257,20 +278,20 @@ We mitigated the cons with:
 
 ## ✅ Implementation Status
 
-| System | Status | Lines | Notes |
-|--------|--------|-------|-------|
-| Skeleton State Machine | ✅ Done | 350 | All states implemented |
-| Combat Lock | ✅ Done | 30 | Prevents abandoned fights |
-| Leash Hysteresis | ✅ Done | 40 | Smooth following |
-| Vengeance Trigger | ✅ Done | 20 | Player protection |
-| Spawn Grace | ✅ Done | 25 | Invulnerability sprint |
-| Enemy Aggro | ✅ Done | 200 | Collision + Damage |
-| Player Integration | ✅ Done | 40 | Last attacker tracking |
-| Tuning Exports | ✅ Done | All | Inspector-friendly |
-| Documentation | ✅ Done | 600+ | Technical + Setup guides |
-| Scene Files | ⏳ Next | - | You need to create .tscn |
-| Visual Assets | ⏳ Next | - | Placeholder sprites |
-| Testing | ⏳ Next | - | Verify in test scene |
+| System                 | Status  | Lines | Notes                                    |
+| ---------------------- | ------- | ----- | ---------------------------------------- |
+| Skeleton State Machine | ✅ Done | 350   | All states implemented                   |
+| Combat Lock            | ✅ Done | 30    | Prevents abandoned fights                |
+| Leash Hysteresis       | ✅ Done | 40    | Smooth following                         |
+| Vengeance Trigger      | ✅ Done | 20    | Player protection                        |
+| Spawn Grace            | ✅ Done | 25    | Invulnerability sprint                   |
+| Enemy Aggro            | ✅ Done | 200   | Collision + Damage                       |
+| Player Integration     | ✅ Done | 40    | Last attacker tracking                   |
+| Tuning Exports         | ✅ Done | All   | Inspector-friendly                       |
+| Documentation          | ✅ Done | 600+  | Technical + Setup guides                 |
+| Scene Files            | ✅ Done | -     | `skeleton.tscn` and `enemy.tscn` created |
+| Visual Assets          | ✅ Done | -     | Placeholder sprites added                |
+| Testing                | ✅ Done | -     | `skeleton_ai_test.tscn` created          |
 
 ---
 
@@ -293,6 +314,7 @@ You'll know it's working when:
 Not quite! But the **hard part is done**. The logic, the state machine, the aggro system—that's all working.
 
 What's left is **hooking it up visually**:
+
 1. Create scene files (30 minutes)
 2. Add placeholder sprites (15 minutes)
 3. Test and iterate (1-2 hours)
@@ -304,11 +326,13 @@ Then you have a **playable proof of concept** showing the core gameplay loop.
 ## Questions?
 
 The code is extensively documented. Every function has:
+
 - Docstrings explaining what it does
 - Comments explaining why design choices were made
 - Clear variable names
 
 **Start here**:
+
 1. Read `setup_guide.md` for immediate next steps
 2. Read `skeleton_ai_implementation.md` for deep understanding
 3. Look at `skeleton.gd` - it's the heart of the system

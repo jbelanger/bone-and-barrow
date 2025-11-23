@@ -41,8 +41,8 @@ var aggro_target: Node3D = null  # Skeleton that provoked us
 var max_hp: float = 30.0
 var current_hp: float = 30.0
 var damage: float = 10.0
-var speed: float = 280.0
-var attack_range: float = 50.0
+var speed: float = 7.5
+var attack_range: float = 2.0
 
 ## Combat tracking
 var last_hit_time: float = 0.0
@@ -80,12 +80,16 @@ func _ready() -> void:
 
 func _load_stats() -> void:
 	"""Load enemy stats based on type from GameBalance"""
+	if not GameBalance.ENEMY_STATS.has(enemy_type):
+		push_error("Enemy: Invalid enemy type %s! Using defaults." % enemy_type)
+		return
+
 	var stats = GameBalance.ENEMY_STATS[enemy_type]
-	max_hp = stats["hp"]
+	max_hp = stats.get("hp", 30.0)
 	current_hp = max_hp
-	speed = stats["speed"]
-	damage = stats["damage"]
-	attack_range = stats["attack_range"]
+	speed = stats.get("speed", 7.5)
+	damage = stats.get("damage", 10.0)
+	attack_range = stats.get("attack_range", 2.0)
 
 ## ============================================================================
 ## MAIN PHYSICS LOOP

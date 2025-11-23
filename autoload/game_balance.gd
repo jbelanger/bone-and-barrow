@@ -5,8 +5,6 @@ extends Node
 ## Design decisions and rationale are documented in comments.
 ## See vision.md for the overall game philosophy.
 
-class_name GameBalance
-
 ## ============================================================================
 ## PLAYER / NECROMANCER
 ## ============================================================================
@@ -20,7 +18,7 @@ const PLAYER_MAX_HP_UPGRADE: float = 0.90  # +90% total
 const SOUL_BOLT_DAMAGE: int = 10
 const SOUL_BOLT_COOLDOWN: float = 0.5  # seconds
 
-const PLAYER_MOVEMENT_SPEED: float = 300.0  # pixels per second (tune in prototype)
+const PLAYER_MOVEMENT_SPEED: float = 8.0  # 3D units per second (tune in prototype)
 
 
 ## ============================================================================
@@ -49,40 +47,40 @@ const SKELETON_STATS = {
 	SkeletonType.WARRIOR: {
 		"hp": 20,
 		"damage": 5,
-		"speed": 250.0,  # Medium
-		"range": 50.0,   # Melee
+		"speed": 7.0,  # Medium (3D units/sec)
+		"range": 2.0,   # Melee (3D units)
 		"special": "none",
 		"unlock_cost": 0,  # Starting unit
 	},
 	SkeletonType.ARCHER: {
 		"hp": 12,
 		"damage": 4,
-		"speed": 200.0,  # Slow
-		"range": 400.0,  # Ranged
+		"speed": 5.5,  # Slow (3D units/sec)
+		"range": 15.0,  # Ranged (3D units)
 		"special": "ranged_attack",
 		"unlock_cost": 800,
 	},
 	SkeletonType.BRUTE: {
 		"hp": 40,
 		"damage": 8,
-		"speed": 180.0,  # Slow
-		"range": 50.0,   # Melee
+		"speed": 5.0,  # Slow (3D units/sec)
+		"range": 2.0,   # Melee (3D units)
 		"special": "tank",
 		"unlock_cost": 1200,
 	},
 	SkeletonType.MAGE: {
 		"hp": 15,
 		"damage": 3,
-		"speed": 250.0,  # Medium
-		"range": 300.0,  # Ranged
+		"speed": 7.0,  # Medium (3D units/sec)
+		"range": 12.0,  # Ranged (3D units)
 		"special": "slows_enemies",
 		"unlock_cost": 1500,
 	},
 	SkeletonType.ROGUE: {
 		"hp": 10,
 		"damage": 12,
-		"speed": 350.0,  # Fast
-		"range": 50.0,   # Melee
+		"speed": 10.0,  # Fast (3D units/sec)
+		"range": 2.0,   # Melee (3D units)
 		"special": "high_dps_fragile",
 		"unlock_cost": 2000,
 	},
@@ -96,7 +94,7 @@ const RAISE_CORPSE_SOUL_COST: int = 10
 
 ## Mass Raise: raise multiple at once (unlockable)
 const MASS_RAISE_COUNT: int = 3
-const MASS_RAISE_RADIUS: float = 150.0  # pixels
+const MASS_RAISE_RADIUS: float = 5.0  # 3D units
 
 
 ## ============================================================================
@@ -116,24 +114,24 @@ enum EnemyType {
 const ENEMY_STATS = {
 	EnemyType.SQUIRE: {
 		"hp": 30,
-		"speed": 280.0,  # Fast
+		"speed": 7.5,  # Fast (3D units/sec)
 		"damage": 10,
 		"behavior": "beeline_to_heart",
-		"attack_range": 50.0,  # Melee
+		"attack_range": 2.0,  # Melee (3D units)
 	},
 	EnemyType.ARCHER: {
 		"hp": 25,
-		"speed": 200.0,  # Slow
+		"speed": 5.5,  # Slow (3D units/sec)
 		"damage": 8,
 		"behavior": "stop_at_range_shoot_player",
-		"attack_range": 400.0,  # Ranged
+		"attack_range": 15.0,  # Ranged (3D units)
 	},
 	EnemyType.PRIEST: {
 		"hp": 40,
-		"speed": 250.0,  # Medium
+		"speed": 7.0,  # Medium (3D units/sec)
 		"damage": 15,
 		"behavior": "aoe_kills_skeletons",
-		"attack_range": 200.0,  # AOE radius
+		"attack_range": 8.0,  # AOE radius (3D units)
 		"special": "skeleton_killer",
 	},
 }

@@ -30,9 +30,9 @@ enum State {
 
 @export_group("Movement Speeds")
 ## Normal movement speed (following/attacking)
-@export var walk_speed: float = 100.0
+@export var walk_speed: float = 7.0
 ## Speed when rallying back to player (must be faster than player)
-@export var rally_speed: float = 140.0
+@export var rally_speed: float = 10.0
 
 @export_group("Combat Lock Settings")
 ## Maximum distance before skeleton abandons locked combat
@@ -41,10 +41,6 @@ enum State {
 @export_group("Spawn Settings")
 ## Duration of invulnerable sprint after being raised
 @export var spawn_grace_duration: float = 1.5
-
-@export_group("Death Settings")
-## Whether to spawn corpse on death (for re-raising)
-@export var spawn_corpse_on_death: bool = true
 
 ## ============================================================================
 ## INTERNAL STATE
@@ -67,7 +63,7 @@ var skeleton_type: GameBalance.SkeletonType = GameBalance.SkeletonType.WARRIOR
 var max_hp: float = 20.0
 var current_hp: float = 20.0
 var damage: float = 5.0
-var attack_range: float = 50.0
+var attack_range: float = 2.0
 
 ## Combat tracking
 var last_hit_time: float = 0.0
@@ -104,12 +100,16 @@ func _ready() -> void:
 
 func _load_stats() -> void:
 	"""Load skeleton stats based on type from GameBalance"""
+	if not GameBalance.SKELETON_STATS.has(skeleton_type):
+		push_error("Skeleton: Invalid skeleton type %s! Using defaults." % skeleton_type)
+		return
+
 	var stats = GameBalance.SKELETON_STATS[skeleton_type]
-	max_hp = stats["hp"]
+	max_hp = stats.get("hp", 20.0)
 	current_hp = max_hp
-	damage = stats["damage"]
-	walk_speed = stats["speed"]
-	attack_range = stats["range"]
+	damage = stats.get("damage", 5.0)
+	walk_speed = stats.get("speed", 7.0)
+	attack_range = stats.get("range", 2.0)
 
 	# Rally speed is 40% faster than walk speed
 	rally_speed = walk_speed * 1.4
@@ -259,10 +259,10 @@ func _attack_enemy(enemy: Node3D, _delta: float) -> void:
 func _deal_damage(enemy: Node3D) -> void:
 	"""Deal damage to an enemy"""
 	if enemy.has_method("take_damage"):
-		enemy.take_damage(damage)
+		enemy.take_damage(damage, self)
 		print("[Skeleton] Hit enemy for %d damage" % damage)
 
-func take_damage(amount: float) -> void:
+func take_damage(amount: float, attacker: Node3D = null) -> void:
 	"""Called when skeleton takes damage"""
 	current_hp -= amount
 
@@ -286,15 +286,12 @@ func _die() -> void:
 	"""Handle skeleton death - turn back into corpse"""
 	print("[Skeleton] Crumbled!")
 
-	# Spawn corpse at death location (can be re-raised!)
-	if spawn_corpse_on_death:
-		# Use preload to avoid circular dependency
-		var corpse_scene = preload("res://entities/corpses/corpse.tscn")
-		var corpse = corpse_scene.instantiate()
-		get_parent().add_child(corpse)
-		corpse.global_position = global_position
-		corpse.global_rotation = global_rotation
-		print("[Skeleton] Spawned corpse at position %s" % global_position)
+	# NOTE: Skeletons don't spawn corpses when they die to avoid circular dependency
+	# (corpse.tscn references skeleton.tscn, so skeleton can't preload corpse.tscn)
+	# Only enemies spawn corpses when they die.
+
+	# Log telemetry
+	Telemetry.event("skeleton_died", "", "", "", 0, 0, 0, 0)
 
 	# TODO: Play death animation/particle effect
 
